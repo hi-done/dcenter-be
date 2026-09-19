@@ -66,12 +66,12 @@ func NewGoldService() *goldService {
 		GS = &goldService{
 			ctx: context.Background(),
 		}
-		GS.Start()
+		GS.start()
 	}
 	return GS
 }
 
-func (s *goldService) Start() {
+func (s *goldService) start() {
 	go func() {
 		s.fetchGoldPrices()
 

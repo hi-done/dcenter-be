@@ -9,7 +9,7 @@ Quick Start:
 docker pull alpine:3.20
 
 - 构建与发送
-  `scp v1.0.0\linux_amd64\main sin@192.168.3.22:~/dcodes/backend/`
+  `gf build; scp v1.0.0\linux_amd64\main sin@192.168.3.22:~/dcodes/backend/`
 
 - docker
   `docker build -t dcenter-backend .`

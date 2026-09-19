@@ -12,8 +12,7 @@ import (
 	"github.com/gorilla/websocket"
 
 	v1 "dcenter/api/hardware/v1"
-	"dcenter/internal/model"
-	"dcenter/internal/service"
+	"dcenter/utility/hardware"
 )
 
 const (
@@ -34,6 +33,8 @@ var wsUpGrader = websocket.Upgrader{
 }
 
 // GetCpuTemp 将 HTTP 连接升级为 WebSocket，并每秒向前端推送一次系统 CPU 温度。
+// 温度直接取自全局唯一的采样服务（utility/hardware.NewHardwareService）：
+// 所有连接共享同一份采样结果，连接结束后自动释放引用，无调用方时采样自动停止。
 // 推送消息结构与 HTTP 接口保持一致：{"code":0,"message":"OK","data":{"tempCelsius":27.85,"timestamp":1757836800000}}。
 func (c *ControllerV1) GetCpuTemp(ctx context.Context, req *v1.GetCpuTempReq) (res *v1.GetCpuTempRes, err error) {
 	r := g.RequestFromCtx(ctx)
@@ -58,40 +59,55 @@ func (c *ControllerV1) GetCpuTemp(ctx context.Context, req *v1.GetCpuTempReq) (r
 		}
 	}()
 
-	// 业务层按固定间隔采样 CPU 温度，接口层负责将采样结果推送给前端
-	samples := service.Hardware().WatchCpuTemp(clientCtx, wsPushInterval)
+	// 获取全局唯一的硬件采样服务；clientCtx 结束时自动释放本次引用
+	hs := hardware.NewHardwareService(clientCtx)
+
+	// 建立连接后立即推送一次，避免前端等待首个推送周期
+	if pushErr := pushCpuTemp(ctx, conn, hs); pushErr != nil {
+		return nil, nil
+	}
+
+	// 按固定间隔读取最新采样结果并推送给前端
+	ticker := time.NewTicker(wsPushInterval)
+	defer ticker.Stop()
 	for {
 		select {
-		case <-ctx.Done():
+		case <-clientCtx.Done():
 			return nil, nil
-		case sample, ok := <-samples:
-			if !ok {
-				return nil, nil
-			}
-			_ = conn.SetWriteDeadline(time.Now().Add(wsWriteWait))
-			if writeErr := conn.WriteJSON(buildPushMessage(sample)); writeErr != nil {
-				g.Log().Debugf(ctx, "cpu temp websocket closed: %v", writeErr)
+		case <-ticker.C:
+			if pushErr := pushCpuTemp(ctx, conn, hs); pushErr != nil {
 				return nil, nil
 			}
 		}
 	}
 }
 
-// buildPushMessage 将业务层采样结果转换为推送消息；
-// 采样失败时返回带错误码的消息，前端可据此展示异常状态。
-func buildPushMessage(sample model.CpuTempSample) ghttp.DefaultHandlerResponse {
-	if sample.Err != nil {
+// pushCpuTemp 读取一次最新采样结果并写入连接；写入失败时返回错误。
+func pushCpuTemp(ctx context.Context, conn *websocket.Conn, hs *hardware.HardwareService) error {
+	tempCelsius, sampleErr := hs.GetInfo()
+	_ = conn.SetWriteDeadline(time.Now().Add(wsWriteWait))
+	if err := conn.WriteJSON(buildPushMessage(tempCelsius, sampleErr)); err != nil {
+		g.Log().Debugf(ctx, "cpu temp websocket closed: %v", err)
+		return err
+	}
+	return nil
+}
+
+// buildPushMessage 将一次采样结果转换为推送消息；
+// 采样失败（或首个采样尚未完成）时返回带错误码的消息，前端可据此展示异常状态。
+func buildPushMessage(tempCelsius float64, sampleErr error) ghttp.DefaultHandlerResponse {
+	if sampleErr != nil {
 		return ghttp.DefaultHandlerResponse{
 			Code:    gcode.CodeInternalError.Code(),
-			Message: sample.Err.Error(),
+			Message: sampleErr.Error(),
 		}
 	}
 	return ghttp.DefaultHandlerResponse{
 		Code:    gcode.CodeOK.Code(),
 		Message: gcode.CodeOK.Message(),
 		Data: v1.GetCpuTempRes{
-			TempCelsius: sample.TempCelsius,
-			Timestamp:   sample.Timestamp.UnixMilli(),
+			TempCelsius: tempCelsius,
+			Timestamp:   time.Now().UnixMilli(),
 		},
 	}
 }

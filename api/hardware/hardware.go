@@ -12,4 +12,5 @@ import (
 
 type IHardwareV1 interface {
 	GetCpuTemp(ctx context.Context, req *v1.GetCpuTempReq) (res *v1.GetCpuTempRes, err error)
+	GetSysInfo(ctx context.Context, req *v1.GetSysInfoReq) (res *v1.GetSysInfoRes, err error)
 }
