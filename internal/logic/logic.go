@@ -8,4 +8,5 @@ import (
 	_ "dcenter/internal/logic/gold"
 	_ "dcenter/internal/logic/hardware"
 	_ "dcenter/internal/logic/middleware"
+	_ "dcenter/internal/logic/user"
 )

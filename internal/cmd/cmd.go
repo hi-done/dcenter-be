@@ -9,7 +9,7 @@ import (
 
 	"dcenter/internal/controller/gold"
 	"dcenter/internal/controller/hardware"
-	"dcenter/internal/controller/hello"
+	"dcenter/internal/controller/user"
 	"dcenter/internal/service"
 )
 
@@ -24,9 +24,13 @@ var (
 			s.Group("/", func(group *ghttp.RouterGroup) {
 				group.Middleware(ghttp.MiddlewareHandlerResponse)
 				group.Bind(
-					hello.NewV1(),
 					hardware.NewV1(),
 					gold.NewV1(),
+				)
+				// 需要登录认证的路由
+				group.Middleware(service.Middleware().Auth)
+				group.Bind(
+					user.NewV1(),
 				)
 			})
 			s.Run()

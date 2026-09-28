@@ -11,6 +11,8 @@ import (
 
 type (
 	IMiddleware interface {
+		// Auth 认证中间件：校验 Access Token，过期时自动使用 Refresh Token 刷新（双 token 机制）
+		Auth(r *ghttp.Request)
 		CORS(r *ghttp.Request)
 	}
 )
