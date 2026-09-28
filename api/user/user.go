@@ -12,4 +12,5 @@ import (
 
 type IUserV1 interface {
 	GetInviteCode(ctx context.Context, req *v1.GetInviteCodeReq) (res *v1.GetInviteCodeRes, err error)
+	SignOut(ctx context.Context, req *v1.SignOutReq) (res *v1.SignOutRes, err error)
 }

@@ -9,6 +9,7 @@ import (
 
 	"dcenter/internal/controller/gold"
 	"dcenter/internal/controller/hardware"
+	"dcenter/internal/controller/sys"
 	"dcenter/internal/controller/user"
 	"dcenter/internal/service"
 )
@@ -26,6 +27,7 @@ var (
 				group.Bind(
 					hardware.NewV1(),
 					gold.NewV1(),
+					sys.NewV1(),
 				)
 				// 需要登录认证的路由
 				group.Middleware(service.Middleware().Auth)
