@@ -1,0 +1,30 @@
+# https://goframe.org/docs/web/server-config-file-template
+server:
+  address:     ":8000"
+  openapiPath: "/api.json"
+  swaggerPath: "/swagger"
+
+# https://goframe.org/docs/core/glog-config
+logger:
+  level : "all"
+  stdout: true
+
+# https://goframe.org/docs/core/gdb-config-file
+database:
+  default:
+    link: "mysql:root:123456@tcp(192.168.3.22:3306)/dcenter?loc=Local&parseTime=true"
+    debug: true
+
+redis:
+  default:
+    address: 127.0.0.1:6379
+    db:      1
+    pass:        123456
+    idleTimeout: 600
+
+jwt:
+  access_secret: "12345qwert"
+  refresh_secret: "qwert12345"
+  # Token 有效期，支持 s/m/h/d 单位
+  access_expire: "3m"
+  refresh_expire: "7d"
